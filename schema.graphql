@@ -1,0 +1,28 @@
+
+type PublicKey @entity {
+  id: ID! # PublicKey on network
+}
+
+type NetworkAccount @entity {
+  id: ID! # network account address
+  publicKey: PublicKey!
+  network: String!
+}
+
+type Transfer @entity {
+  id: ID!  #this primary key is the network + block number + the event id
+  amount: BigInt
+  blockNumber: BigInt
+  network: String!
+  from: Account! #Sending Address
+  to: Account! # receiving address
+  fromPk: PublicKey! # we add this due to current query filter not allow search pk from from/to Account attribute
+  toPk: PublicKey!
+}
+
+
+type Balance @entity {
+  id: ID!  # public key address ,we don't have to worry duplicate key, as we will use historical feature
+  network: String!
+  balance: BigInt
+}
