@@ -42,7 +42,7 @@ export async function handleEvent(event: SubstrateEvent): Promise<void> {
   transfer.toPkId = toPk
   transfer.amount = (amount as Balance).toBigInt();
   transfer.network = NETWORK;
-  await Promise.all([updateBalance(transfer.fromId,fromPk,transfer.blockNumber),updateBalance(transfer.toId, toPk,transfer.blockNumber)])
+  // await Promise.all([updateBalance(transfer.fromId,fromPk,transfer.blockNumber),updateBalance(transfer.toId, toPk,transfer.blockNumber)])
   await transfer.save();
 }
 
@@ -55,4 +55,16 @@ export async function updateBalance(account:string, publicKey:string,blockHeight
   newBalance.publicKeyId = publicKey;
   newBalance.blockNumber = blockHeight;
   await newBalance.save()
+}
+
+
+export async function handlePolkadotEvent(event: SubstrateEvent):Promise<void>{
+  NETWORK = 'polkadot'
+  await handleEvent(event)
+}
+
+
+export async function handleKusamaEvent(event: SubstrateEvent):Promise<void>{
+  NETWORK = 'kusama'
+  await handleEvent(event)
 }

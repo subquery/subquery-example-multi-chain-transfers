@@ -3,7 +3,7 @@ type PublicKey @entity {
   id: ID! # PublicKey on network
 }
 
-type NetworkAccount @entity {
+type Account @entity {
   id: ID! # network account address
   publicKey: PublicKey!
   network: String!
@@ -21,8 +21,11 @@ type Transfer @entity {
 }
 
 
-type Balance @entity {
-  id: ID!  # public key address ,we don't have to worry duplicate key, as we will use historical feature
+type AccountBalance @entity {
+  id: ID!  # Account + blockHeight
+  account: Account!
+  publicKey: PublicKey!
   network: String!
   balance: BigInt
+  blockNumber: BigInt
 }
