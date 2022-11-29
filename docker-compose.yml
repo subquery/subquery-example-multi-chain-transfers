@@ -17,7 +17,7 @@ services:
       timeout: 5s
       retries: 5
 
-  subquery-node:
+  subquery-node-polkadot:
     image: onfinality/subql-node:latest
     depends_on:
       "postgres":
@@ -32,11 +32,37 @@ services:
     volumes:
       - ./:/app
     command:
-      - -f=/app
-      - --db-schema=app
-      - --disable-historical=false
+      - -f=app/project-polkadot.yaml
+      - --multi-chain
+      - --db-schema=multi-transfers
+      - --disable-historical
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://subquery-node:3000/ready"]
+      test: ["CMD", "curl", "-f", "http://subquery-node-polkadot:3000/ready"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  subquery-node-kusama:
+    image: onfinality/subql-node:latest
+    depends_on:
+      "postgres":
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./:/app
+    command:
+      - -f=app/project-kusama.yaml
+      - --multi-chain
+      - --db-schema=multi-transfers
+      - --disable-historical
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://subquery-node-kusama:3001/ready"]
       interval: 3s
       timeout: 5s
       retries: 10
@@ -48,8 +74,6 @@ services:
     depends_on:
       "postgres":
         condition: service_healthy
-      "subquery-node":
-        condition: service_healthy
     restart: always
     environment:
       DB_USER: postgres
@@ -58,6 +82,5 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
     command:
-      - --name=app
+      - --name=multi-transfers
       - --playground
-      - --indexer=http://subquery-node:3000
