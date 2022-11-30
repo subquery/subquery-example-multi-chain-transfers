@@ -3,21 +3,21 @@ name: kusama-transfers
 version: 0.0.1
 runner:
   node:
-    name: '@subql/node'
-    version: '>=1.0.0'
+    name: "@subql/node"
+    version: ">=1.0.0"
   query:
-    name: '@subql/query'
-    version: '*'
+    name: "@subql/query"
+    version: "*"
 description: >-
   This project can be used as a starting point for developing your SubQuery
   project
-repository: 'https://github.com/subquery/multi-networks-transfers.git'
+repository: "https://github.com/subquery/multi-networks-transfers.git"
 schema:
   file: ./schema.graphql
 network:
-  chainId: '0xb0a8d493285c2df73290dfb7e61f870f17b41801197a149ca93654499ea3dafe'
-  endpoint: 'wss://kusama.api.onfinality.io/public-ws'
-  dictionary: 'https://api.subquery.network/sq/subquery/kusama-dictionary'
+  chainId: "0xb0a8d493285c2df73290dfb7e61f870f17b41801197a149ca93654499ea3dafe"
+  endpoint: "wss://kusama.api.onfinality.io/public-ws"
+  dictionary: "https://api.subquery.network/sq/subquery/kusama-dictionary"
 dataSources:
   - kind: substrate/Runtime
     startBlock: 1
