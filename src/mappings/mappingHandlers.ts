@@ -4,30 +4,32 @@ import { Balance, AccountId } from "@polkadot/types/interfaces";
 import { decodeAddress } from "@polkadot/util-crypto";
 import { u8aToHex } from "@polkadot/util";
 
-let NETWORK;
-
-export async function ensureAccount(
+async function ensureAccount(
   accountId: string,
-  publicKey: string
+  publicKey: string,
+  network: "polkadot" | "kusama"
 ): Promise<void> {
   const account = await Account.get(accountId);
   if (!account) {
     const newAccount = new Account(accountId);
-    newAccount.network = NETWORK;
+    newAccount.network = network;
     await ensurePublicKey(publicKey);
     newAccount.publicKeyId = publicKey;
     await newAccount.save();
   }
 }
 
-export async function ensurePublicKey(pk: string): Promise<void> {
+async function ensurePublicKey(pk: string): Promise<void> {
   const publicKey = await PublicKey.get(pk);
   if (!publicKey) {
     await new PublicKey(pk.toString()).save();
   }
 }
 
-export async function handleEvent(event: SubstrateEvent): Promise<void> {
+async function handleEvent(
+  event: SubstrateEvent,
+  network: "polkadot" | "kusama"
+): Promise<void> {
   // The balances.transfer event has the following payload \[from, to, value\] that we can access
   const fromAddress = event.event.data[0] as AccountId;
   const toAddress = event.event.data[1] as AccountId;
@@ -36,12 +38,13 @@ export async function handleEvent(event: SubstrateEvent): Promise<void> {
   const fromPk = u8aToHex(decodeAddress(fromAddress.toString()));
   const toPk = u8aToHex(decodeAddress(toAddress.toString()));
   await Promise.all([
-    ensureAccount(fromAddress.toString(), fromPk),
-    ensureAccount(toAddress.toString(), toPk),
+    ensureAccount(fromAddress.toString(), fromPk, network),
+    ensureAccount(toAddress.toString(), toPk, network),
   ]);
 
+  // We prefix the ID with the network name to prevent ID collisions across networks
   const transfer = new Transfer(
-    `${NETWORK}-${event.block.block.header.number.toNumber()}-${event.idx}`
+    `${network}-${event.block.block.header.number.toNumber()}-${event.idx}`
   );
   transfer.blockNumber = event.block.block.header.number.toBigInt();
   transfer.fromId = toAddress.toString();
@@ -49,15 +52,19 @@ export async function handleEvent(event: SubstrateEvent): Promise<void> {
   transfer.toId = toAddress.toString();
   transfer.toPkId = toPk;
   transfer.amount = (amount as Balance).toBigInt();
-  transfer.network = NETWORK;
-  // await Promise.all([updateBalance(transfer.fromId,fromPk,transfer.blockNumber),updateBalance(transfer.toId, toPk,transfer.blockNumber)])
-  await transfer.save();
+  transfer.network = network;
+  await Promise.all([
+    updateBalance(transfer.fromId, fromPk, transfer.blockNumber, network),
+    updateBalance(transfer.toId, toPk, transfer.blockNumber, network),
+    transfer.save(),
+  ]);
 }
 
-export async function updateBalance(
+async function updateBalance(
   account: string,
   publicKey: string,
-  blockHeight: bigint
+  blockHeight: bigint,
+  network: "polkadot" | "kusama"
 ) {
   let {
     data: { free: previousFree },
@@ -66,20 +73,17 @@ export async function updateBalance(
   const newBalance = new AccountBalance(`${account}-${blockHeight}`);
   newBalance.balance = previousFree.toBigInt();
   newBalance.accountId = account;
-  newBalance.network = NETWORK;
+  newBalance.network = network;
   newBalance.publicKeyId = publicKey;
   newBalance.blockNumber = blockHeight;
   await newBalance.save();
 }
 
-export async function handlePolkadotEvent(
-  event: SubstrateEvent
-): Promise<void> {
-  NETWORK = "polkadot";
-  await handleEvent(event);
+// We have two handlers here to allow us to save the correct source network of the transfer
+export async function handlePolkadotEvent(e: SubstrateEvent): Promise<void> {
+  await handleEvent(e, "polkadot");
 }
 
-export async function handleKusamaEvent(event: SubstrateEvent): Promise<void> {
-  NETWORK = "kusama";
-  await handleEvent(event);
+export async function handleKusamaEvent(e: SubstrateEvent): Promise<void> {
+  await handleEvent(e, "kusama");
 }
