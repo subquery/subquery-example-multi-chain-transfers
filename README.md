@@ -37,7 +37,7 @@ In order to index your SubQuery project, it is mandatory to build your project f
 Run this command under the project directory.
 
 ```
-yarn codegen --file project-polkadot.yaml
+yarn codegen --file ./project-polkadot.yaml
 ```
 
 ## Build the project
