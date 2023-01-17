@@ -8,26 +8,13 @@ import {
 import { Balance, AccountId } from "@polkadot/types/interfaces";
 import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
 
-async function ensureAccount(
-  accountId: string,
-  publicKey: string,
-  network: "polkadot" | "kusama"
-): Promise<void> {
-  const account = await Account.get(accountId);
-  if (!account) {
-    const newAccount = new Account(accountId);
-    newAccount.network = network;
-    await ensureGenericSubstrateAddress(publicKey);
-    newAccount.genericSubstrateAccountId = publicKey;
-    await newAccount.save();
-  }
+// We have two handlers here to allow us to save the correct source network of the transfer
+export async function handlePolkadotEvent(e: SubstrateEvent): Promise<void> {
+  await handleEvent(e, "polkadot");
 }
 
-async function ensureGenericSubstrateAddress(address: string): Promise<void> {
-  const publicKey = await GenericSubstrateAccount.get(address);
-  if (!publicKey) {
-    await new GenericSubstrateAccount(address.toString()).save();
-  }
+export async function handleKusamaEvent(e: SubstrateEvent): Promise<void> {
+  await handleEvent(e, "kusama");
 }
 
 async function handleEvent(
@@ -72,23 +59,42 @@ async function handleEvent(
   ]);
 }
 
+async function ensureAccount(
+  accountId: string,
+  publicKey: string,
+  network: "polkadot" | "kusama"
+): Promise<void> {
+  const account = await Account.get(accountId);
+  if (!account) {
+    const newAccount = new Account(accountId);
+    newAccount.network = network;
+    await ensureGenericSubstrateAddress(publicKey);
+    newAccount.genericSubstrateAccountId = publicKey;
+    await newAccount.save();
+  }
+}
+
+async function ensureGenericSubstrateAddress(address: string): Promise<void> {
+  const publicKey = await GenericSubstrateAccount.get(address);
+  if (!publicKey) {
+    await new GenericSubstrateAccount(address.toString()).save();
+  }
+}
+
 async function updateBalance(account: string, blockHeight: bigint) {
-  let {
-    data: { free: previousFree },
-    nonce: previousNonce,
-  } = await api.query.system.account(account);
-  const newBalance = new AccountBalance(`${account}-${blockHeight}`);
-  newBalance.balance = previousFree.toBigInt();
-  newBalance.accountId = account;
-  newBalance.blockNumber = blockHeight;
-  await newBalance.save();
-}
-
-// We have two handlers here to allow us to save the correct source network of the transfer
-export async function handlePolkadotEvent(e: SubstrateEvent): Promise<void> {
-  await handleEvent(e, "polkadot");
-}
-
-export async function handleKusamaEvent(e: SubstrateEvent): Promise<void> {
-  await handleEvent(e, "kusama");
+  try {
+    let {
+      data: { free: previousFree },
+      nonce: previousNonce,
+    } = await api.query.system.account(account);
+    const newBalance = new AccountBalance(`${account}-${blockHeight}`);
+    newBalance.balance = previousFree.toBigInt();
+    newBalance.accountId = account;
+    newBalance.blockNumber = blockHeight;
+    await newBalance.save();
+  } catch (e) {
+    // On old blocks this call is not supported
+    // https://github.com/polkadot-js/api/issues/3708
+    // do nothing
+  }
 }
