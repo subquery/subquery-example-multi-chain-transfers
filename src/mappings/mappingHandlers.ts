@@ -1,8 +1,12 @@
 import { SubstrateEvent } from "@subql/types";
-import { Account, AccountBalance, PublicKey, Transfer } from "../types";
+import {
+  Account,
+  AccountBalance,
+  GenericSubstrateAccount,
+  Transfer,
+} from "../types";
 import { Balance, AccountId } from "@polkadot/types/interfaces";
-import { decodeAddress } from "@polkadot/util-crypto";
-import { u8aToHex } from "@polkadot/util";
+import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
 
 async function ensureAccount(
   accountId: string,
@@ -13,16 +17,16 @@ async function ensureAccount(
   if (!account) {
     const newAccount = new Account(accountId);
     newAccount.network = network;
-    await ensurePublicKey(publicKey);
-    newAccount.publicKeyId = publicKey;
+    await ensureGenericSubstrateAddress(publicKey);
+    newAccount.genericSubstrateAccountId = publicKey;
     await newAccount.save();
   }
 }
 
-async function ensurePublicKey(pk: string): Promise<void> {
-  const publicKey = await PublicKey.get(pk);
+async function ensureGenericSubstrateAddress(address: string): Promise<void> {
+  const publicKey = await GenericSubstrateAccount.get(address);
   if (!publicKey) {
-    await new PublicKey(pk.toString()).save();
+    await new GenericSubstrateAccount(address.toString()).save();
   }
 }
 
@@ -35,11 +39,19 @@ async function handleEvent(
   const toAddress = event.event.data[1] as AccountId;
   const amount = event.event.data[2];
 
-  const fromPk = u8aToHex(decodeAddress(fromAddress.toString()));
-  const toPk = u8aToHex(decodeAddress(toAddress.toString()));
+  // 42 is the encode code for a generic Substrate address
+  const fromGenericAddress: string = encodeAddress(
+    decodeAddress(fromAddress.toString()),
+    42
+  );
+  const toGenericAddress: string = encodeAddress(
+    decodeAddress(toAddress.toString()),
+    42
+  );
+
   await Promise.all([
-    ensureAccount(fromAddress.toString(), fromPk, network),
-    ensureAccount(toAddress.toString(), toPk, network),
+    ensureAccount(fromAddress.toString(), fromGenericAddress, network),
+    ensureAccount(toAddress.toString(), toGenericAddress, network),
   ]);
 
   // We prefix the ID with the network name to prevent ID collisions across networks
@@ -48,24 +60,19 @@ async function handleEvent(
   );
   transfer.blockNumber = event.block.block.header.number.toBigInt();
   transfer.fromId = toAddress.toString();
-  transfer.fromPkId = fromPk;
+  transfer.fromGenericSubstrateAccountId = fromGenericAddress;
   transfer.toId = toAddress.toString();
-  transfer.toPkId = toPk;
+  transfer.toGenericSubstrateAccountId = toGenericAddress;
   transfer.amount = (amount as Balance).toBigInt();
   transfer.network = network;
   await Promise.all([
-    updateBalance(transfer.fromId, fromPk, transfer.blockNumber, network),
-    updateBalance(transfer.toId, toPk, transfer.blockNumber, network),
+    updateBalance(transfer.fromId, transfer.blockNumber),
+    updateBalance(transfer.toId, transfer.blockNumber),
     transfer.save(),
   ]);
 }
 
-async function updateBalance(
-  account: string,
-  publicKey: string,
-  blockHeight: bigint,
-  network: "polkadot" | "kusama"
-) {
+async function updateBalance(account: string, blockHeight: bigint) {
   let {
     data: { free: previousFree },
     nonce: previousNonce,
@@ -73,8 +80,6 @@ async function updateBalance(
   const newBalance = new AccountBalance(`${account}-${blockHeight}`);
   newBalance.balance = previousFree.toBigInt();
   newBalance.accountId = account;
-  newBalance.network = network;
-  newBalance.publicKeyId = publicKey;
   newBalance.blockNumber = blockHeight;
   await newBalance.save();
 }

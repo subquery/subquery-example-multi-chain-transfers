@@ -1,10 +1,11 @@
-type PublicKey @entity {
-  id: ID! # PublicKey on network
+type GenericSubstrateAccount @entity {
+  id: ID! # Generic Substrate Address always starts with the number 5
 }
 
-type Account @entity {
+type Account
+  @entity { # This is a network specific address of the particular account
   id: ID! # network account address
-  publicKey: PublicKey!
+  genericSubstrateAccount: GenericSubstrateAccount!
   network: String!
 }
 
@@ -15,15 +16,13 @@ type Transfer @entity {
   network: String!
   from: Account! #Sending Address
   to: Account! # receiving address
-  fromPk: PublicKey! # we add this due to current query filter not allow search pk from from/to Account attribute
-  toPk: PublicKey!
+  fromGenericSubstrateAccount: GenericSubstrateAccount! # we add this due to current query filter not allow search pk from from/to Account attribute
+  toGenericSubstrateAccount: GenericSubstrateAccount!
 }
 
 type AccountBalance @entity {
   id: ID! # Account + blockHeight
   account: Account!
-  publicKey: PublicKey!
-  network: String!
   balance: BigInt
   blockNumber: BigInt
 }
