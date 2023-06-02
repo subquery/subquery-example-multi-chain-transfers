@@ -43,15 +43,15 @@ async function handleEvent(
 
   // We prefix the ID with the network name to prevent ID collisions across networks
   const transfer = new Transfer(
-    `${network}-${event.block.block.header.number.toNumber()}-${event.idx}`
+    `${network}-${event.block.block.header.number.toNumber()}-${event.idx}`,
+      network,
+      toAddress.toString(),
+      fromAddress.toString(),
+      fromGenericAddress,
+      toGenericAddress,
   );
   transfer.blockNumber = event.block.block.header.number.toBigInt();
-  transfer.fromId = toAddress.toString();
-  transfer.fromGenericSubstrateAccountId = fromGenericAddress;
-  transfer.toId = toAddress.toString();
-  transfer.toGenericSubstrateAccountId = toGenericAddress;
   transfer.amount = (amount as Balance).toBigInt();
-  transfer.network = network;
   await Promise.all([
     updateBalance(transfer.fromId, transfer.blockNumber),
     updateBalance(transfer.toId, transfer.blockNumber),
@@ -66,10 +66,8 @@ async function ensureAccount(
 ): Promise<void> {
   const account = await Account.get(accountId);
   if (!account) {
-    const newAccount = new Account(accountId);
-    newAccount.network = network;
     await ensureGenericSubstrateAddress(publicKey);
-    newAccount.genericSubstrateAccountId = publicKey;
+    const newAccount = new Account(accountId,publicKey,network);
     await newAccount.save();
   }
 }
@@ -87,9 +85,8 @@ async function updateBalance(account: string, blockHeight: bigint) {
       data: { free: previousFree },
       nonce: previousNonce,
     } = await api.query.system.account(account);
-    const newBalance = new AccountBalance(`${account}-${blockHeight}`);
+    const newBalance = new AccountBalance(`${account}-${blockHeight}`,account);
     newBalance.balance = previousFree.toBigInt();
-    newBalance.accountId = account;
     newBalance.blockNumber = blockHeight;
     await newBalance.save();
   } catch (e) {
