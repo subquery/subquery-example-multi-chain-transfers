@@ -7,6 +7,7 @@ import {
 } from "../types";
 import { Balance, AccountId } from "@polkadot/types/interfaces";
 import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
+import {FrameSystemAccountInfo} from "@polkadot/types/lookup";
 
 // We have two handlers here to allow us to save the correct source network of the transfer
 export async function handlePolkadotEvent(e: SubstrateEvent): Promise<void> {
@@ -84,7 +85,7 @@ async function updateBalance(account: string, blockHeight: bigint) {
     let {
       data: { free: previousFree },
       nonce: previousNonce,
-    } = await api.query.system.account(account);
+    } = await api.query.system.account(account) as unknown as FrameSystemAccountInfo;
     const newBalance = new AccountBalance(`${account}-${blockHeight}`,account);
     newBalance.balance = previousFree.toBigInt();
     newBalance.blockNumber = blockHeight;
