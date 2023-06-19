@@ -7,6 +7,7 @@ import {
 } from "../types";
 import { Balance, AccountId } from "@polkadot/types/interfaces";
 import { decodeAddress, encodeAddress } from "@polkadot/util-crypto";
+import {FrameSystemAccountInfo} from "@polkadot/types/lookup";
 
 // We have two handlers here to allow us to save the correct source network of the transfer
 export async function handlePolkadotEvent(e: SubstrateEvent): Promise<void> {
@@ -44,11 +45,11 @@ async function handleEvent(
   // We prefix the ID with the network name to prevent ID collisions across networks
   const transfer = new Transfer(
     `${network}-${event.block.block.header.number.toNumber()}-${event.idx}`,
-    network,
-    toAddress.toString(),
-    toAddress.toString(),
-    fromGenericAddress,
-    toGenericAddress
+      network,
+      toAddress.toString(),
+      fromAddress.toString(),
+      fromGenericAddress,
+      toGenericAddress,
   );
   transfer.blockNumber = event.block.block.header.number.toBigInt();
   transfer.amount = (amount as Balance).toBigInt();
@@ -67,7 +68,7 @@ async function ensureAccount(
   const account = await Account.get(accountId);
   if (!account) {
     await ensureGenericSubstrateAddress(publicKey);
-    const newAccount = new Account(accountId, publicKey, network);
+    const newAccount = new Account(accountId,publicKey,network);
     await newAccount.save();
   }
 }
@@ -84,8 +85,8 @@ async function updateBalance(account: string, blockHeight: bigint) {
     let {
       data: { free: previousFree },
       nonce: previousNonce,
-    } = await api.query.system.account(account);
-    const newBalance = new AccountBalance(`${account}-${blockHeight}`, account);
+    } = await api.query.system.account(account) as unknown as FrameSystemAccountInfo;
+    const newBalance = new AccountBalance(`${account}-${blockHeight}`,account);
     newBalance.balance = previousFree.toBigInt();
     newBalance.blockNumber = blockHeight;
     await newBalance.save();
