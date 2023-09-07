@@ -5,3 +5,4 @@ query:
 projects:
   - project-kusama.yaml
   - project-polkadot.yaml
+  - project-assethub.yaml

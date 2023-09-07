@@ -37,7 +37,11 @@ services:
       - --db-schema=multi-transfers
       - --disable-historical
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://subquery-node-polkadot:3000/ready"]
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://subquery-node-project-polkadot:3000/ready
       interval: 3s
       timeout: 5s
       retries: 10
@@ -62,7 +66,11 @@ services:
       - --db-schema=multi-transfers
       - --disable-historical
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://subquery-node-kusama:3001/ready"]
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://subquery-node-project-kusama:3000/ready
       interval: 3s
       timeout: 5s
       retries: 10
@@ -84,3 +92,31 @@ services:
     command:
       - --name=multi-transfers
       - --playground
+  subquery-node-project-assethub:
+    image: onfinality/subql-node:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    environment:
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_DATABASE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./:/app
+    command:
+      - -f=app/project-assethub.yaml
+      - --multi-chain
+      - --db-schema=multi-transfers
+      - --disable-historical
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://subquery-node-project-assethub:3000/ready
+      interval: 3s
+      timeout: 5s
+      retries: 10

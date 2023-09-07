@@ -17,17 +17,20 @@ schema:
 
 # The only difference in these two project manifests is below
 network:
-  chainId: "0x91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3"
+  chainId: "0x68d56f15f85d3136970ec16946040bc1752654e906147f7e43e9d539d7c3de2f"
   endpoint:
-    ["wss://polkadot.api.onfinality.io/public-ws", "wss://rpc.polkadot.io"]
-  dictionary: "https://api.subquery.network/sq/subquery/polkadot-dictionary"
+    [
+      "wss://statemint.api.onfinality.io/public-ws",
+      "wss://statemint-rpc.polkadot.io",
+    ]
+  dictionary: "https://api.subquery.network/sq/subquery/statemint-dictionary"
 dataSources:
   - kind: substrate/Runtime
     startBlock: 1
     mapping:
       file: ./dist/index.js
       handlers:
-        - handler: handlePolkadotEvent
+        - handler: handleKusamaEvent
           kind: substrate/EventHandler
           filter:
             module: balances
